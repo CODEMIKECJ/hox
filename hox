@@ -1,0 +1,80 @@
+var config = {
+  baseBet: { label: "Podstawowy zakład", value: currency.minAmount, type: "number" },
+  betOntrain: { label: "Stały zakład po przegranej", value: 0.2, type: "number" },
+  payout: { label: "Wypłcaj na", value: 1.2, type: "number" },
+  train: { label: "Czekaj na train", value: 2, type: "number" },
+  onLoseTitle: { label: "Na przegraną", type: "title" },
+  onLoss: {
+    label: "",
+    value: "trainmultiply",
+    type: "radio",
+    options: [
+      { value: "increase", label: "Zwiększ zakład" },
+      { value: "reset", label: "Powróć do podstawowgo zakładu" },
+      { value: "train", label: "Zakład stały" },
+      { value: "trainmultiply", label: "Zwiększ zakład stały" },
+    ],
+  },
+  lossMultiplier: { label: "Mnożnik przegranej", value: 2.4, type: "number" },
+  onWinTitle: { label: "Na wygraną", type: "title" },
+  onWin: {
+    label: "",
+    value: "reset",
+    type: "radio",
+    options: [
+      { value: "reset", label: "Powróć do podstawowgo zakładu" },
+    ],
+  },
+  countLost: { value: 0},
+  isLastGamelost: {value: false},
+};
+function main() {
+  var currentBet = config.baseBet.value;
+  game.onBet = function () {
+    game.bet(currentBet, config.payout.value).then(function (payout) {
+      if (payout > 1) {
+        if (config.onWin.value === "reset") {
+          currentBet = config.baseBet.value;
+          config.countLost.value = 0;
+          config.isLastGamelost.value = false;
+        }
+        log.success(
+          "Wygrana"
+        );
+      } else {
+          config.countLost.value++;
+          config.isLastGamelost.value = true;
+          if(config.countLost.value >= config.train.value){
+            currentBet = config.betOntrain.value;
+            if (config.onLoss.value === "reset") {
+                currentBet = config.baseBet.value;
+            } else if(config.onLoss.value === "train") {
+                currentBet = config.betOntrain.value;
+            } else if(config.onLoss.value === "trainmultiply") { 
+              if(config.isLastGamelost.value){
+                if((config.countLost.value) > config.train.value){
+                  currentBet *= config.lossMultiplier.value;
+                }else{
+                  currentBet = config.betOntrain.value;
+                }
+              }else{
+                currentBet = config.betOntrain.value;
+              }
+            }else{
+                currentBet *= config.lossMultiplier.value;
+            }
+          }
+
+        log.error(
+          "Przegrana, więc następny zakład będzie " +
+            currentBet +
+            " " +
+            currency.currencyName
+        );
+        log.error(
+          "Train: " + config.countLost.value
+        );
+      }
+    });
+  };
+}
